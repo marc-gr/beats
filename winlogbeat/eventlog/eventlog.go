@@ -15,26 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
+//go:build windows
+
 package eventlog
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/elastic/beats/v7/libbeat/beat"
 	"github.com/elastic/beats/v7/winlogbeat/checkpoint"
 	"github.com/elastic/beats/v7/winlogbeat/sys/winevent"
-	"github.com/elastic/elastic-agent-libs/logp"
+	conf "github.com/elastic/elastic-agent-libs/config"
 	"github.com/elastic/elastic-agent-libs/mapstr"
-)
-
-// Debug selectors used in this package.
-const (
-	debugSelector = "eventlog"
-)
-
-// Debug logging functions for this package.
-var (
-	debugf = logp.MakeDebug(debugSelector)
 )
 
 // EventLog is an interface to a Windows Event Log.
@@ -70,7 +63,6 @@ type EventLog interface {
 type Record struct {
 	winevent.Event
 	File   string                   // Source file when event is from a file.
-	API    string                   // The event log API type used to read the record.
 	XML    string                   // XML representation of the event.
 	Offset checkpoint.EventLogState // Position of the record within its source stream.
 }
@@ -80,7 +72,6 @@ func (e Record) ToEvent() beat.Event {
 	win := e.Fields()
 
 	_ = win.Delete("time_created")
-	_, _ = win.Put("api", e.API)
 
 	m := mapstr.M{
 		"winlog": win,
@@ -120,4 +111,22 @@ func rename(m mapstr.M, oldKey, newKey string) {
 	}
 	_, _ = m.Put(newKey, v)
 	_ = m.Delete(oldKey)
+}
+
+type validator interface {
+	Validate() error
+}
+
+func readConfig(c *conf.C, config interface{}) error {
+	if err := c.Unpack(config); err != nil {
+		return fmt.Errorf("failed unpacking config. %v", err)
+	}
+
+	if v, ok := config.(validator); ok {
+		if err := v.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
