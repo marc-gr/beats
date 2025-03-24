@@ -457,14 +457,19 @@ class Test(WriteReadTest):
         """
         wineventlog - Event with newlines and control characters
         """
-        msg = """
+        account_name = "MS4\x1e$"
+        # Windows 2025 Server encodes message differently
+        if platform.platform().startswith("Windows-2025"):
+            account_name = "MS4_$"
+
+        msg = f"""
 A trusted logon process has been registered with the Local Security Authority.
 This logon process will be trusted to submit logon requests.
 
 Subject:
 
 Security ID:  SYSTEM
-Account Name:  MS4\x1e$
+Account Name:  {account_name}
 Account Domain:  WORKGROUP
 Logon ID:  0x3e7
 Logon Process Name:  IKE"""
