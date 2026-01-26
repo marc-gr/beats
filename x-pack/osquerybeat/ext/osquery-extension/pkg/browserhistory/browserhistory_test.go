@@ -76,12 +76,12 @@ func getCurrentUserFromTestData(t *testing.T) string {
 		},
 	}
 
-	rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+	rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 	if err != nil || len(rows) == 0 {
 		t.Fatalf("Failed to get user from test data: %v", err)
 	}
 
-	return rows[0]["user"]
+	return rows[0].User
 }
 
 // TestAllRows tests that we get the expected total number of rows
@@ -99,9 +99,9 @@ func TestAllRows(t *testing.T) {
 		},
 	}
 
-	rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+	rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 	if err != nil {
-		t.Fatalf("GetTableRows returned error: %v", err)
+		t.Fatalf("generateFunc returned error: %v", err)
 	}
 
 	if len(rows) != expectedTotalRows {
@@ -124,9 +124,9 @@ func TestChromeFilter(t *testing.T) {
 		},
 	}
 
-	rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+	rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 	if err != nil {
-		t.Fatalf("GetTableRows returned error: %v", err)
+		t.Fatalf("generateFunc returned error: %v", err)
 	}
 
 	if len(rows) != expectedChromeRows {
@@ -134,7 +134,7 @@ func TestChromeFilter(t *testing.T) {
 	}
 
 	for _, row := range rows {
-		browser := strings.ToLower(row["browser"])
+		browser := strings.ToLower(row.Browser)
 		if !strings.Contains(browser, "chrome") && !strings.Contains(browser, "chromium") {
 			t.Errorf("Expected browser to contain 'chrome' or 'chromium', got: %s", browser)
 		}
@@ -156,9 +156,9 @@ func TestEdgeFilter(t *testing.T) {
 		},
 	}
 
-	rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+	rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 	if err != nil {
-		t.Fatalf("GetTableRows returned error: %v", err)
+		t.Fatalf("generateFunc returned error: %v", err)
 	}
 
 	if len(rows) != expectedEdgeRows {
@@ -166,7 +166,7 @@ func TestEdgeFilter(t *testing.T) {
 	}
 
 	for _, row := range rows {
-		browser := strings.ToLower(row["browser"])
+		browser := strings.ToLower(row.Browser)
 		if !strings.Contains(browser, "edge") {
 			t.Errorf("Expected browser to contain 'edge', got: %s", browser)
 		}
@@ -206,9 +206,9 @@ func TestBrowserFiltering(t *testing.T) {
 				},
 			}
 
-			rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+			rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 			if err != nil {
-				t.Fatalf("GetTableRows returned error: %v", err)
+				t.Fatalf("generateFunc returned error: %v", err)
 			}
 
 			if len(rows) != tt.expectedCount {
@@ -217,15 +217,15 @@ func TestBrowserFiltering(t *testing.T) {
 
 			// Verify all rows have the correct browser
 			for _, row := range rows {
-				if row["browser"] != tt.browser {
-					t.Errorf("Expected browser %s, got %s", tt.browser, row["browser"])
+				if row.Browser != tt.browser {
+					t.Errorf("Expected browser %s, got %s", tt.browser, row.Browser)
 				}
 			}
 
 			// Verify expected profiles are present
 			foundProfiles := make(map[string]bool)
 			for _, row := range rows {
-				foundProfiles[row["profile_name"]] = true
+				foundProfiles[row.ProfileName] = true
 			}
 			for _, expectedProfile := range tt.expectedProfiles {
 				if !foundProfiles[expectedProfile] {
@@ -268,9 +268,9 @@ func TestProfileFiltering(t *testing.T) {
 				},
 			}
 
-			rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+			rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 			if err != nil {
-				t.Fatalf("GetTableRows returned error: %v", err)
+				t.Fatalf("generateFunc returned error: %v", err)
 			}
 
 			if len(rows) != tt.expectedCount {
@@ -279,8 +279,8 @@ func TestProfileFiltering(t *testing.T) {
 
 			// Verify all rows have the correct profile
 			for _, row := range rows {
-				if row["profile_name"] != tt.profile {
-					t.Errorf("Expected profile_name %s, got %s", tt.profile, row["profile_name"])
+				if row.ProfileName != tt.profile {
+					t.Errorf("Expected profile_name %s, got %s", tt.profile, row.ProfileName)
 				}
 			}
 		})
@@ -313,9 +313,9 @@ func TestUserFiltering(t *testing.T) {
 		},
 	}
 
-	rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+	rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 	if err != nil {
-		t.Fatalf("GetTableRows returned error: %v", err)
+		t.Fatalf("generateFunc returned error: %v", err)
 	}
 
 	if len(rows) != expectedTotalRows {
@@ -324,8 +324,8 @@ func TestUserFiltering(t *testing.T) {
 
 	// Verify all rows have the correct user
 	for _, row := range rows {
-		if row["user"] != expectedUser {
-			t.Errorf("Expected user %s, got %s", expectedUser, row["user"])
+		if row.User != expectedUser {
+			t.Errorf("Expected user %s, got %s", expectedUser, row.User)
 		}
 	}
 }
@@ -369,9 +369,9 @@ func TestTimestampEquals(t *testing.T) {
 					},
 				}
 
-				rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+				rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 				if err != nil {
-					t.Fatalf("GetTableRows returned error: %v", err)
+					t.Fatalf("generateFunc returned error: %v", err)
 				}
 
 				if len(rows) == 0 {
@@ -381,10 +381,8 @@ func TestTimestampEquals(t *testing.T) {
 
 				// Verify all rows have the exact timestamp
 				for _, row := range rows {
-					if ts, err := strconv.ParseInt(row["timestamp"], 10, 64); err == nil {
-						if ts != earliestTime {
-							t.Errorf("Expected timestamp %d, got %d", earliestTime, ts)
-						}
+					if row.Timestamp.Unix() != earliestTime {
+						t.Errorf("Expected timestamp %d, got %d", earliestTime, row.Timestamp.Unix())
 					}
 				}
 			})
@@ -432,17 +430,15 @@ func TestTimestampGreaterThan(t *testing.T) {
 					},
 				}
 
-				rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+				rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 				if err != nil {
-					t.Fatalf("GetTableRows returned error: %v", err)
+					t.Fatalf("generateFunc returned error: %v", err)
 				}
 
 				// Verify all rows have timestamp > midTime
 				for _, row := range rows {
-					if ts, err := strconv.ParseInt(row["timestamp"], 10, 64); err == nil {
-						if ts <= midTime {
-							t.Errorf("Expected timestamp > %d, got %d", midTime, ts)
-						}
+					if row.Timestamp.Unix() <= midTime {
+						t.Errorf("Expected timestamp > %d, got %d", midTime, row.Timestamp.Unix())
 					}
 				}
 			})
@@ -490,17 +486,15 @@ func TestTimestampLessThan(t *testing.T) {
 					},
 				}
 
-				rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+				rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 				if err != nil {
-					t.Fatalf("GetTableRows returned error: %v", err)
+					t.Fatalf("generateFunc returned error: %v", err)
 				}
 
 				// Verify all rows have timestamp < midTime
 				for _, row := range rows {
-					if ts, err := strconv.ParseInt(row["timestamp"], 10, 64); err == nil {
-						if ts >= midTime {
-							t.Errorf("Expected timestamp < %d, got %d", midTime, ts)
-						}
+					if row.Timestamp.Unix() >= midTime {
+						t.Errorf("Expected timestamp < %d, got %d", midTime, row.Timestamp.Unix())
 					}
 				}
 			})
@@ -547,17 +541,15 @@ func TestTimestampGreaterThanOrEquals(t *testing.T) {
 					},
 				}
 
-				rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+				rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 				if err != nil {
-					t.Fatalf("GetTableRows returned error: %v", err)
+					t.Fatalf("generateFunc returned error: %v", err)
 				}
 
 				// Verify all rows have timestamp >= earliestTime
 				for _, row := range rows {
-					if ts, err := strconv.ParseInt(row["timestamp"], 10, 64); err == nil {
-						if ts < earliestTime {
-							t.Errorf("Expected timestamp >= %d, got %d", earliestTime, ts)
-						}
+					if row.Timestamp.Unix() < earliestTime {
+						t.Errorf("Expected timestamp >= %d, got %d", earliestTime, row.Timestamp.Unix())
 					}
 				}
 			})
@@ -604,17 +596,15 @@ func TestTimestampLessThanOrEquals(t *testing.T) {
 					},
 				}
 
-				rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+				rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 				if err != nil {
-					t.Fatalf("GetTableRows returned error: %v", err)
+					t.Fatalf("generateFunc returned error: %v", err)
 				}
 
 				// Verify all rows have timestamp <= latestTime
 				for _, row := range rows {
-					if ts, err := strconv.ParseInt(row["timestamp"], 10, 64); err == nil {
-						if ts > latestTime {
-							t.Errorf("Expected timestamp <= %d, got %d", latestTime, ts)
-						}
+					if row.Timestamp.Unix() > latestTime {
+						t.Errorf("Expected timestamp <= %d, got %d", latestTime, row.Timestamp.Unix())
 					}
 				}
 			})
@@ -663,20 +653,18 @@ func TestTimestampRange(t *testing.T) {
 					},
 				}
 
-				rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+				rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 				if err != nil {
-					t.Fatalf("GetTableRows returned error: %v", err)
+					t.Fatalf("generateFunc returned error: %v", err)
 				}
 
 				// Get unique timestamps from rows
 				actualTimestamps := make(map[int64]bool)
 				for _, row := range rows {
-					if ts, err := strconv.ParseInt(row["timestamp"], 10, 64); err == nil {
-						actualTimestamps[ts] = true
-						if ts < earliestTime || ts > latestTime {
-							t.Errorf("Expected timestamp in range [%d, %d], got %d", earliestTime, latestTime, ts)
-						}
+					if row.Timestamp.Unix() < earliestTime || row.Timestamp.Unix() > latestTime {
+						t.Errorf("Expected timestamp in range [%d, %d], got %d", earliestTime, latestTime, row.Timestamp.Unix())
 					}
+					actualTimestamps[row.Timestamp.Unix()] = true
 				}
 
 				// Verify all expected timestamps are present
@@ -811,9 +799,9 @@ func TestDatetimeFiltering(t *testing.T) {
 					},
 				}
 
-				rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+				rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 				if err != nil {
-					t.Fatalf("GetTableRows returned error: %v", err)
+					t.Fatalf("generateFunc returned error: %v", err)
 				}
 
 				if len(rows) == 0 {
@@ -821,14 +809,10 @@ func TestDatetimeFiltering(t *testing.T) {
 					return
 				}
 
-				// Verify datetime field is present and parseable for all rows
+				// Verify datetime field is present for all rows
 				for _, row := range rows {
-					// Verify datetime field is present and parseable
-					if dt := row["datetime"]; dt != "" {
-						if _, err := time.Parse(time.RFC3339, dt); err != nil {
-							t.Errorf("Invalid RFC3339 datetime in result: %s", dt)
-						}
-					} else {
+					// Verify datetime field is present
+					if row.Datetime.IsZero() {
 						t.Error("Expected datetime field to be present")
 					}
 				}
@@ -843,9 +827,9 @@ func TestDatetimeFiltering(t *testing.T) {
 						},
 					}
 
-					rows, err := GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+					rows, err := generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 					if err != nil {
-						t.Fatalf("GetTableRows returned error for >= filter: %v", err)
+						t.Fatalf("generateFunc returned error for >= filter: %v", err)
 					}
 
 					if len(rows) == 0 {
@@ -854,10 +838,8 @@ func TestDatetimeFiltering(t *testing.T) {
 
 					// Verify all returned timestamps are >= earliestTime
 					for _, row := range rows {
-						if ts, err := strconv.ParseInt(row["timestamp"], 10, 64); err == nil {
-							if ts < earliestTime {
-								t.Errorf("Expected timestamp >= %d, got %d", earliestTime, ts)
-							}
+						if row.Timestamp.Unix() < earliestTime {
+							t.Errorf("Expected timestamp >= %d, got %d", earliestTime, row.Timestamp.Unix())
 						}
 					}
 				}
@@ -872,17 +854,15 @@ func TestDatetimeFiltering(t *testing.T) {
 					},
 				}
 
-				rows, err = GetTableRows(ctx, queryContext, logger.New(os.Stderr, true))
+				rows, err = generateFunc(ctx, queryContext, logger.New(os.Stderr, true))
 				if err != nil {
-					t.Fatalf("GetTableRows returned error for <= filter: %v", err)
+					t.Fatalf("generateFunc returned error for <= filter: %v", err)
 				}
 
 				// Verify all returned timestamps are <= latestTime
 				for _, row := range rows {
-					if ts, err := strconv.ParseInt(row["timestamp"], 10, 64); err == nil {
-						if ts > latestTime {
-							t.Errorf("Expected timestamp <= %d, got %d", latestTime, ts)
-						}
+					if row.Timestamp.Unix() > latestTime {
+						t.Errorf("Expected timestamp <= %d, got %d", latestTime, row.Timestamp.Unix())
 					}
 				}
 			})
