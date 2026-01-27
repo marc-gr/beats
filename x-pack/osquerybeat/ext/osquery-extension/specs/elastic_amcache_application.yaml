@@ -1,0 +1,165 @@
+type: table
+name: elastic_amcache_application
+description: Windows Amcache application inventory from the InventoryApplication registry hive
+platforms:
+  - windows
+
+implementation_package: github.com/elastic/beats/v7/x-pack/osquerybeat/ext/osquery-extension/pkg/amcache/tables
+
+columns:
+  - name: timestamp
+    type: BIGINT
+    description: Last write time of the registry key in UNIX epoch seconds
+    go_type: time.Time
+    format: unix
+
+  - name: date_time
+    type: TEXT
+    description: Last write time of the registry key in RFC3339 format
+    go_type: time.Time
+    format: rfc3339
+    timezone: UTC
+
+  - name: program_id
+    type: TEXT
+    description: Unique program identifier (includes SHA1 hash)
+
+  - name: program_instance_id
+    type: TEXT
+    description: Instance identifier for the program
+
+  - name: name
+    type: TEXT
+    description: Application name
+
+  - name: version
+    type: TEXT
+    description: Application version
+
+  - name: publisher
+    type: TEXT
+    description: Application publisher or vendor
+
+  - name: language
+    type: BIGINT
+    description: Application language code
+
+  - name: install_date
+    type: TEXT
+    description: Installation date
+    go_type: time.Time
+
+  - name: source
+    type: TEXT
+    description: Installation source
+
+  - name: root_dir_path
+    type: TEXT
+    description: Root directory path of the application
+
+  - name: hidden_arp
+    type: BIGINT
+    description: Whether the application is hidden in Add/Remove Programs
+
+  - name: uninstall_string
+    type: TEXT
+    description: Command to uninstall the application
+
+  - name: registry_key_path
+    type: TEXT
+    description: Registry key path for the application
+
+  - name: store_app_type
+    type: TEXT
+    description: Microsoft Store app type
+
+  - name: inbox_modern_app
+    type: TEXT
+    description: Whether this is an inbox modern app
+
+  - name: manifest_path
+    type: TEXT
+    description: Path to the application manifest
+
+  - name: package_full_name
+    type: TEXT
+    description: Full package name for UWP apps
+
+  - name: msi_package_code
+    type: TEXT
+    description: MSI package code
+
+  - name: msi_product_code
+    type: TEXT
+    description: MSI product code
+
+  - name: msi_install_date
+    type: TEXT
+    description: MSI installation date
+    go_type: time.Time
+
+  - name: bundle_manifest_path
+    type: TEXT
+    description: Path to bundle manifest
+
+  - name: user_sid
+    type: TEXT
+    description: Security identifier of the user who installed the application
+
+  - name: sha1
+    type: TEXT
+    description: SHA1 hash extracted from program_id
+
+documentation:
+  description: |
+    The elastic_amcache_application table provides access to Windows Amcache application
+    inventory data from the InventoryApplication registry hive. Amcache stores information
+    about installed applications, including metadata such as install dates, versions,
+    publishers, and file hashes.
+    
+    This data is valuable for:
+    - Software inventory and license management
+    - Detecting unauthorized or malicious software installations
+    - Forensic analysis of application execution history
+    - Compliance monitoring and auditing
+  
+  examples:
+    - title: List all installed applications
+      query: |
+        SELECT name, version, publisher, install_date
+        FROM elastic_amcache_application
+        ORDER BY install_date DESC;
+
+    - title: Find applications by publisher
+      query: |
+        SELECT name, version, install_date, sha1
+        FROM elastic_amcache_application
+        WHERE publisher LIKE '%Microsoft%'
+        ORDER BY name;
+
+    - title: Detect applications with suspicious characteristics
+      query: |
+        SELECT name, publisher, root_dir_path, sha1
+        FROM elastic_amcache_application
+        WHERE hidden_arp = 1 OR publisher = ''
+        ORDER BY timestamp DESC;
+
+    - title: Find recently installed applications
+      query: |
+        SELECT name, version, publisher, install_date, timestamp
+        FROM elastic_amcache_application
+        WHERE timestamp > (strftime('%s', 'now') - 86400 * 7)
+        ORDER BY timestamp DESC;
+
+  notes:
+    - This table reads from the Windows Amcache.hve registry hive
+    - Requires appropriate permissions to access registry data
+    - The SHA1 hash is automatically extracted from the program_id field
+    - Data is cached for performance; the cache is refreshed periodically
+    - Only available on Windows platforms
+
+  related_tables:
+    - elastic_amcache_application_file
+    - elastic_amcache_application_shortcut
+    - programs
+    - registry

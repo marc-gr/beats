@@ -1,0 +1,167 @@
+type: table
+name: elastic_amcache_application_file
+description: Windows Amcache application file inventory from the InventoryApplicationFile registry hive
+platforms:
+  - windows
+
+implementation_package: github.com/elastic/beats/v7/x-pack/osquerybeat/ext/osquery-extension/pkg/amcache/tables
+
+columns:
+  - name: timestamp
+    type: BIGINT
+    description: Last write time of the registry key in UNIX epoch seconds
+    go_type: time.Time
+    format: unix
+
+  - name: date_time
+    type: TEXT
+    description: Last write time of the registry key in RFC3339 format
+    go_type: time.Time
+    format: rfc3339
+    timezone: UTC
+
+  - name: program_id
+    type: TEXT
+    description: Associated program identifier (includes SHA1 hash)
+
+  - name: file_id
+    type: TEXT
+    description: Unique file identifier
+
+  - name: lower_case_long_path
+    type: TEXT
+    description: Full lowercase file path
+
+  - name: name
+    type: TEXT
+    description: File name
+
+  - name: original_file_name
+    type: TEXT
+    description: Original file name from PE metadata
+
+  - name: publisher
+    type: TEXT
+    description: File publisher from version information
+
+  - name: version
+    type: TEXT
+    description: File version string
+
+  - name: bin_file_version
+    type: TEXT
+    description: Binary file version
+
+  - name: binary_type
+    type: TEXT
+    description: Binary type (e.g., pe32, pe64)
+
+  - name: product_name
+    type: TEXT
+    description: Product name from version information
+
+  - name: product_version
+    type: TEXT
+    description: Product version string
+
+  - name: link_date
+    type: TEXT
+    description: PE linker timestamp
+    go_type: time.Time
+
+  - name: bin_product_version
+    type: TEXT
+    description: Binary product version
+
+  - name: size
+    type: BIGINT
+    description: File size in bytes
+
+  - name: language
+    type: BIGINT
+    description: File language code
+
+  - name: usn
+    type: BIGINT
+    description: NTFS Update Sequence Number
+
+  - name: appx_package_full_name
+    type: TEXT
+    description: Full name of the APPX package
+
+  - name: is_os_component
+    type: TEXT
+    description: Whether the file is an OS component
+
+  - name: appx_package_relative_id
+    type: TEXT
+    description: Relative identifier within the APPX package
+
+  - name: sha1
+    type: TEXT
+    description: SHA1 hash extracted from program_id
+
+documentation:
+  description: |
+    The elastic_amcache_application_file table provides detailed information about
+    application files tracked in the Windows Amcache InventoryApplicationFile hive.
+    This includes executable files, DLLs, and other binaries associated with installed
+    applications.
+    
+    This data is valuable for:
+    - Detailed file-level software inventory
+    - Tracking file versions and updates
+    - Identifying unsigned or suspicious binaries
+    - Forensic analysis of executed files
+    - Threat hunting and malware detection
+  
+  examples:
+    - title: List all application files with details
+      query: |
+        SELECT name, version, publisher, lower_case_long_path, size
+        FROM elastic_amcache_application_file
+        ORDER BY timestamp DESC
+        LIMIT 100;
+
+    - title: Find files by specific publisher
+      query: |
+        SELECT name, product_name, version, lower_case_long_path, sha1
+        FROM elastic_amcache_application_file
+        WHERE publisher LIKE '%Microsoft%'
+        ORDER BY name;
+
+    - title: Identify large executable files
+      query: |
+        SELECT name, size, lower_case_long_path, sha1
+        FROM elastic_amcache_application_file
+        WHERE size > 10485760
+        ORDER BY size DESC;
+
+    - title: Find files modified recently
+      query: |
+        SELECT name, lower_case_long_path, timestamp, sha1
+        FROM elastic_amcache_application_file
+        WHERE timestamp > (strftime('%s', 'now') - 86400 * 7)
+        ORDER BY timestamp DESC;
+
+    - title: Detect potential unsigned binaries
+      query: |
+        SELECT name, lower_case_long_path, publisher, sha1
+        FROM elastic_amcache_application_file
+        WHERE publisher = '' OR publisher IS NULL
+        ORDER BY timestamp DESC;
+
+  notes:
+    - This table reads from the Windows Amcache.hve registry hive
+    - Provides file-level details for applications tracked in Amcache
+    - The SHA1 hash is automatically extracted from the program_id field
+    - USN (Update Sequence Number) helps track NTFS file system changes
+    - Data is cached for performance
+    - Only available on Windows platforms
+
+  related_tables:
+    - elastic_amcache_application
+    - elastic_amcache_application_shortcut
+    - file
+    - hash
+    - authenticode

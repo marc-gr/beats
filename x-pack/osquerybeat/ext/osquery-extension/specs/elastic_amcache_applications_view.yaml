@@ -1,0 +1,346 @@
+type: view
+name: elastic_amcache_applications_view
+description: View joining amcache application and file tables with UNION to show all applications and orphaned files
+platforms:
+  - windows
+implementation_package: github.com/elastic/beats/v7/x-pack/osquerybeat/ext/osquery-extension/pkg/amcache
+
+required_tables:
+  - elastic_amcache_application
+  - elastic_amcache_application_file
+
+columns:
+  - name: timestamp
+    type: BIGINT
+    description: Last write time in UNIX epoch seconds
+    go_type: time.Time
+    format: unix
+
+  - name: date_time
+    type: TEXT
+    description: Last write time in RFC3339 format
+    go_type: time.Time
+    format: rfc3339
+    timezone: UTC
+
+  - name: program_id
+    type: TEXT
+    description: Program identifier (anchor for joining)
+
+  - name: file_id
+    type: TEXT
+    description: File identifier (from application_file table)
+
+  - name: lower_case_long_path
+    type: TEXT
+    description: Full lowercase file path
+
+  - name: name
+    type: TEXT
+    description: Application or file name
+
+  - name: original_file_name
+    type: TEXT
+    description: Original file name from PE metadata
+
+  - name: publisher
+    type: TEXT
+    description: Publisher or vendor
+
+  - name: version
+    type: TEXT
+    description: Version string
+
+  - name: bin_file_version
+    type: TEXT
+    description: Binary file version
+
+  - name: binary_type
+    type: TEXT
+    description: Binary type (e.g., pe32, pe64)
+
+  - name: product_name
+    type: TEXT
+    description: Product name from version information
+
+  - name: product_version
+    type: TEXT
+    description: Product version string
+
+  - name: link_date
+    type: TEXT
+    description: PE linker timestamp
+    go_type: time.Time
+
+  - name: bin_product_version
+    type: TEXT
+    description: Binary product version
+
+  - name: size
+    type: BIGINT
+    description: File size in bytes
+
+  - name: language
+    type: BIGINT
+    description: Language code
+
+  - name: usn
+    type: BIGINT
+    description: NTFS Update Sequence Number
+
+  - name: appx_package_full_name
+    type: TEXT
+    description: Full name of the APPX package
+
+  - name: is_os_component
+    type: TEXT
+    description: Whether the file is an OS component
+
+  - name: appx_package_relative_id
+    type: TEXT
+    description: Relative identifier within the APPX package
+
+  - name: file_sha1
+    type: TEXT
+    description: SHA1 hash from file table
+
+  - name: program_instance_id
+    type: TEXT
+    description: Program instance identifier (from application table)
+
+  - name: install_date
+    type: TEXT
+    description: Installation date
+    go_type: time.Time
+
+  - name: source
+    type: TEXT
+    description: Installation source
+
+  - name: root_dir_path
+    type: TEXT
+    description: Root directory path of the application
+
+  - name: hidden_arp
+    type: BIGINT
+    description: Whether hidden in Add/Remove Programs
+
+  - name: uninstall_string
+    type: TEXT
+    description: Command to uninstall the application
+
+  - name: registry_key_path
+    type: TEXT
+    description: Registry key path for the application
+
+  - name: store_app_type
+    type: TEXT
+    description: Microsoft Store app type
+
+  - name: inbox_modern_app
+    type: TEXT
+    description: Whether this is an inbox modern app
+
+  - name: manifest_path
+    type: TEXT
+    description: Path to the application manifest
+
+  - name: package_full_name
+    type: TEXT
+    description: Full package name for UWP apps
+
+  - name: msi_package_code
+    type: TEXT
+    description: MSI package code
+
+  - name: msi_product_code
+    type: TEXT
+    description: MSI product code
+
+  - name: msi_install_date
+    type: TEXT
+    description: MSI installation date
+    go_type: time.Time
+
+  - name: bundle_manifest_path
+    type: TEXT
+    description: Path to bundle manifest
+
+  - name: user_sid
+    type: TEXT
+    description: User security identifier
+
+  - name: app_sha1
+    type: TEXT
+    description: SHA1 hash from application table
+
+query: |
+  SELECT
+    COALESCE(file.timestamp, app.timestamp) AS timestamp,
+    COALESCE(file.date_time, app.date_time) AS date_time,
+    app.program_id,
+    file.file_id,
+    file.lower_case_long_path,
+    COALESCE(file.name, app.name) AS name,
+    file.original_file_name,
+    COALESCE(file.publisher, app.publisher) AS publisher,
+    COALESCE(file.version, app.version) AS version,
+    file.bin_file_version,
+    file.binary_type,
+    file.product_name,
+    file.product_version,
+    file.link_date,
+    file.bin_product_version,
+    file.size,
+    COALESCE(file.language, app.language) AS language,
+    file.usn,
+    file.appx_package_full_name,
+    file.is_os_component,
+    file.appx_package_relative_id,
+    file.sha1 AS file_sha1,
+    app.program_instance_id,
+    app.install_date,
+    app.source,
+    app.root_dir_path,
+    app.hidden_arp,
+    app.uninstall_string,
+    app.registry_key_path,
+    app.store_app_type,
+    app.inbox_modern_app,
+    app.manifest_path,
+    app.package_full_name,
+    app.msi_package_code,
+    app.msi_product_code,
+    app.msi_install_date,
+    app.bundle_manifest_path,
+    app.user_sid,
+    app.sha1 AS app_sha1
+  FROM elastic_amcache_application AS app
+  LEFT JOIN elastic_amcache_application_file AS file 
+    ON app.program_id = file.program_id
+  
+  UNION ALL
+  
+  SELECT
+    file.timestamp,
+    file.date_time,
+    file.program_id,
+    file.file_id,
+    file.lower_case_long_path,
+    file.name,
+    file.original_file_name,
+    file.publisher,
+    file.version,
+    file.bin_file_version,
+    file.binary_type,
+    file.product_name,
+    file.product_version,
+    file.link_date,
+    file.bin_product_version,
+    file.size,
+    file.language,
+    file.usn,
+    file.appx_package_full_name,
+    file.is_os_component,
+    file.appx_package_relative_id,
+    file.sha1 AS file_sha1,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL AS app_sha1
+  FROM elastic_amcache_application_file AS file
+  LEFT JOIN elastic_amcache_application AS app 
+    ON file.program_id = app.program_id
+  WHERE app.program_id IS NULL;
+
+documentation:
+  description: |
+    The elastic_amcache_applications_view provides a comprehensive unified view of
+    Windows Amcache application and file data. It combines records from both the
+    InventoryApplication and InventoryApplicationFile hives using UNION ALL to ensure
+    all data is captured.
+    
+    The view has two parts:
+    1. Applications with their associated files (LEFT JOIN from application table)
+    2. Orphaned files with no matching application (anti-join to find files without apps)
+    
+    This approach ensures:
+    - All applications are represented (even those without file entries)
+    - All files are represented (even orphaned files without app entries)
+    - No data is lost from either table
+    - File data is prioritized when available via COALESCE
+    
+    This view is valuable for:
+    - Complete application and file inventory
+    - Identifying orphaned files that may indicate partial uninstalls
+    - Correlating applications with their binaries
+    - Security analysis of application components
+    - Forensic investigation of installed software
+
+  examples:
+    - title: List all applications with file information
+      query: |
+        SELECT name, version, publisher, file_id, lower_case_long_path
+        FROM elastic_amcache_applications_view
+        WHERE file_id IS NOT NULL
+        ORDER BY name;
+
+    - title: Find applications without file records
+      query: |
+        SELECT name, version, publisher, program_id
+        FROM elastic_amcache_applications_view
+        WHERE file_id IS NULL
+        ORDER BY name;
+
+    - title: Find orphaned files without application records
+      query: |
+        SELECT name, lower_case_long_path, file_sha1, program_id
+        FROM elastic_amcache_applications_view
+        WHERE program_instance_id IS NULL AND file_id IS NOT NULL
+        ORDER BY timestamp DESC;
+
+    - title: Analyze file sizes by application
+      query: |
+        SELECT name, version, COUNT(*) as file_count, SUM(size) as total_size
+        FROM elastic_amcache_applications_view
+        WHERE file_id IS NOT NULL
+        GROUP BY name, version
+        ORDER BY total_size DESC;
+
+    - title: Find recently added applications or files
+      query: |
+        SELECT name, version, publisher, file_id, timestamp
+        FROM elastic_amcache_applications_view
+        WHERE timestamp > (strftime('%s', 'now') - 86400 * 7)
+        ORDER BY timestamp DESC;
+
+  notes:
+    - This view combines elastic_amcache_application and elastic_amcache_application_file
+    - Uses UNION ALL to include all applications and all files
+    - Part 1 (LEFT JOIN) shows applications with their associated files
+    - Part 2 (anti-join) shows orphaned files without matching applications
+    - COALESCE prioritizes file data over application data when both exist
+    - program_id is the key field used for joining the two tables
+    - Orphaned files can indicate incomplete installations or uninstalls
+    - Only available on Windows platforms
+    - View is automatically created when the osquery extension starts
+
+  related_tables:
+    - elastic_amcache_application
+    - elastic_amcache_application_file
+    - elastic_amcache_application_shortcut
+    - programs
+    - file

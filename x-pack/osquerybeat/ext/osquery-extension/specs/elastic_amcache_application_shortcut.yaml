@@ -1,0 +1,100 @@
+type: table
+name: elastic_amcache_application_shortcut
+description: Windows Amcache application shortcuts from the InventoryApplicationShortcut registry hive
+platforms:
+  - windows
+
+implementation_package: github.com/elastic/beats/v7/x-pack/osquerybeat/ext/osquery-extension/pkg/amcache/tables
+
+columns:
+  - name: timestamp
+    type: BIGINT
+    description: Last write time of the registry key in UNIX epoch seconds
+    go_type: time.Time
+    format: unix
+
+  - name: date_time
+    type: TEXT
+    description: Last write time of the registry key in RFC3339 format
+    go_type: time.Time
+    format: rfc3339
+    timezone: UTC
+
+  - name: shortcut_path
+    type: TEXT
+    description: Full path to the shortcut file (.lnk)
+
+  - name: shortcut_target_path
+    type: TEXT
+    description: Target path that the shortcut points to
+
+  - name: shortcut_aumid
+    type: TEXT
+    description: Application User Model ID (AUMID) for the shortcut
+
+  - name: shortcut_program_id
+    type: TEXT
+    description: Program identifier associated with the shortcut
+
+documentation:
+  description: |
+    The elastic_amcache_application_shortcut table provides information about
+    application shortcuts (.lnk files) tracked in the Windows Amcache registry.
+    This includes Start Menu shortcuts, Desktop shortcuts, and other application
+    launch points.
+    
+    This data is valuable for:
+    - Tracking application launch mechanisms
+    - Identifying persistence mechanisms via shortcuts
+    - Forensic analysis of user activity
+    - Detecting malicious shortcuts
+    - Understanding application installation patterns
+  
+  examples:
+    - title: List all application shortcuts
+      query: |
+        SELECT shortcut_path, shortcut_target_path, timestamp
+        FROM elastic_amcache_application_shortcut
+        ORDER BY timestamp DESC;
+
+    - title: Find shortcuts in Start Menu
+      query: |
+        SELECT shortcut_path, shortcut_target_path, shortcut_aumid
+        FROM elastic_amcache_application_shortcut
+        WHERE shortcut_path LIKE '%Start Menu%'
+        ORDER BY shortcut_path;
+
+    - title: Find shortcuts on Desktop
+      query: |
+        SELECT shortcut_path, shortcut_target_path, timestamp
+        FROM elastic_amcache_application_shortcut
+        WHERE shortcut_path LIKE '%Desktop%'
+        ORDER BY timestamp DESC;
+
+    - title: Find recently created shortcuts
+      query: |
+        SELECT shortcut_path, shortcut_target_path, date_time
+        FROM elastic_amcache_application_shortcut
+        WHERE timestamp > (strftime('%s', 'now') - 86400 * 7)
+        ORDER BY timestamp DESC;
+
+    - title: Find shortcuts pointing to specific locations
+      query: |
+        SELECT shortcut_path, shortcut_target_path, shortcut_program_id
+        FROM elastic_amcache_application_shortcut
+        WHERE shortcut_target_path LIKE '%System32%'
+        ORDER BY shortcut_path;
+
+  notes:
+    - This table reads from the Windows Amcache.hve registry hive
+    - Tracks LNK (shortcut) files created and used by applications
+    - AUMID (Application User Model ID) is used for app identification in Windows
+    - Data is cached for performance
+    - Only available on Windows platforms
+    - Useful for detecting persistence mechanisms that use shortcuts
+
+  related_tables:
+    - elastic_amcache_application
+    - elastic_amcache_application_file
+    - file
+    - startup_items

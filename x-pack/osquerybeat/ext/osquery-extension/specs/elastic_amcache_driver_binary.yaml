@@ -1,0 +1,175 @@
+type: table
+name: elastic_amcache_driver_binary
+description: Windows Amcache driver binary inventory from the InventoryDriverBinary registry hive
+platforms:
+  - windows
+
+implementation_package: github.com/elastic/beats/v7/x-pack/osquerybeat/ext/osquery-extension/pkg/amcache/tables
+
+columns:
+  - name: timestamp
+    type: BIGINT
+    description: Last write time of the registry key in UNIX epoch seconds
+    go_type: time.Time
+    format: unix
+
+  - name: date_time
+    type: TEXT
+    description: Last write time of the registry key in RFC3339 format
+    go_type: time.Time
+    format: rfc3339
+    timezone: UTC
+
+  - name: driver_name
+    type: TEXT
+    description: Name of the driver binary
+
+  - name: inf
+    type: TEXT
+    description: INF file used for driver installation
+
+  - name: driver_version
+    type: TEXT
+    description: Driver version string
+
+  - name: product
+    type: TEXT
+    description: Product name from driver metadata
+
+  - name: product_version
+    type: TEXT
+    description: Product version string
+
+  - name: wdf_version
+    type: TEXT
+    description: Windows Driver Framework (WDF) version
+
+  - name: driver_company
+    type: TEXT
+    description: Company that developed the driver
+
+  - name: driver_package_strong_name
+    type: TEXT
+    description: Strong name of the driver package
+
+  - name: service
+    type: TEXT
+    description: Windows service name for the driver
+
+  - name: driver_in_box
+    type: TEXT
+    description: Whether the driver is included in Windows
+
+  - name: driver_signed
+    type: TEXT
+    description: Whether the driver is digitally signed
+
+  - name: driver_is_kernel_mode
+    type: TEXT
+    description: Whether the driver runs in kernel mode
+
+  - name: driver_id
+    type: TEXT
+    description: Unique driver identifier
+
+  - name: driver_last_write_time
+    type: TEXT
+    description: Last write time from driver metadata
+
+  - name: driver_type
+    type: BIGINT
+    description: Driver type code
+
+  - name: driver_time_stamp
+    type: BIGINT
+    description: PE header timestamp
+
+  - name: driver_check_sum
+    type: BIGINT
+    description: PE header checksum
+
+  - name: image_size
+    type: BIGINT
+    description: Size of the driver image in bytes
+
+documentation:
+  description: |
+    The elastic_amcache_driver_binary table provides detailed information about
+    driver binaries tracked in the Windows Amcache registry. This includes kernel-mode
+    and user-mode drivers, their versions, signing status, and metadata.
+    
+    This data is valuable for:
+    - Driver inventory and version management
+    - Detecting unsigned or suspicious drivers
+    - Security monitoring for rootkits and malicious drivers
+    - Compliance verification for approved drivers
+    - Troubleshooting driver compatibility issues
+    - Forensic analysis of driver installations
+  
+  examples:
+    - title: List all driver binaries
+      query: |
+        SELECT driver_name, driver_version, driver_company, driver_signed
+        FROM elastic_amcache_driver_binary
+        ORDER BY timestamp DESC;
+
+    - title: Find unsigned drivers
+      query: |
+        SELECT driver_name, driver_company, product, driver_is_kernel_mode
+        FROM elastic_amcache_driver_binary
+        WHERE driver_signed = '0' OR driver_signed = 'False'
+        ORDER BY timestamp DESC;
+
+    - title: Find kernel-mode drivers
+      query: |
+        SELECT driver_name, driver_company, driver_version, driver_signed
+        FROM elastic_amcache_driver_binary
+        WHERE driver_is_kernel_mode = '1' OR driver_is_kernel_mode = 'True'
+        ORDER BY driver_name;
+
+    - title: Find third-party drivers (not inbox)
+      query: |
+        SELECT driver_name, driver_company, driver_version, inf
+        FROM elastic_amcache_driver_binary
+        WHERE driver_in_box = '0' OR driver_in_box = 'False'
+        ORDER BY driver_company, driver_name;
+
+    - title: Find recently installed drivers
+      query: |
+        SELECT driver_name, driver_company, driver_version, date_time
+        FROM elastic_amcache_driver_binary
+        WHERE timestamp > (strftime('%s', 'now') - 86400 * 30)
+        ORDER BY timestamp DESC;
+
+    - title: List drivers by company
+      query: |
+        SELECT driver_company, COUNT(*) as driver_count,
+               SUM(CASE WHEN driver_signed = '1' THEN 1 ELSE 0 END) as signed_count
+        FROM elastic_amcache_driver_binary
+        GROUP BY driver_company
+        ORDER BY driver_count DESC;
+
+    - title: Find large driver binaries
+      query: |
+        SELECT driver_name, driver_company, image_size, driver_is_kernel_mode
+        FROM elastic_amcache_driver_binary
+        WHERE image_size > 1048576
+        ORDER BY image_size DESC;
+
+  notes:
+    - This table reads from the Windows Amcache.hve registry hive
+    - Tracks all driver binaries installed on the system
+    - driver_signed indicates if the driver has a valid digital signature
+    - driver_is_kernel_mode distinguishes kernel vs user-mode drivers
+    - driver_in_box indicates if the driver ships with Windows
+    - Unsigned or suspicious drivers may indicate malware or rootkits
+    - WDF (Windows Driver Framework) version indicates driver architecture
+    - Data is cached for performance
+    - Only available on Windows platforms
+
+  related_tables:
+    - elastic_amcache_driver_package
+    - elastic_amcache_device_pnp
+    - drivers
+    - authenticode
+    - file

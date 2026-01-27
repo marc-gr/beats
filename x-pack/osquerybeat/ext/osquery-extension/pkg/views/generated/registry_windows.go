@@ -10,13 +10,25 @@
 package generated
 
 import (
+	_ "github.com/elastic/beats/v7/x-pack/osquerybeat/ext/osquery-extension/pkg/amcache"
+
 	"github.com/elastic/beats/v7/x-pack/osquerybeat/ext/osquery-extension/pkg/hooks"
 	"github.com/elastic/beats/v7/x-pack/osquerybeat/ext/osquery-extension/pkg/logger"
+	elasticamcacheapplicationsview "github.com/elastic/beats/v7/x-pack/osquerybeat/ext/osquery-extension/pkg/views/generated/elastic_amcache_applications_view"
 )
 
 // RegisterViews registers all generated views with the hook manager.
 // This function is called from main.go after all init() functions have run.
-// No views are defined for this platform.
 func RegisterViews(hookManager *hooks.HookManager, log *logger.Logger) {
-	// No views to register for this platform
+	{
+		// View joining amcache application and file tables with UNION to show all applications and orphaned files
+		hooksFunc, err := elasticamcacheapplicationsview.GetHooksFunc()
+		if err != nil {
+			log.Errorf("Failed to get hooks function for elastic_amcache_applications_view: %v", err)
+		} else {
+			hooksFunc(hookManager)
+			log.Infof("Registered view: elastic_amcache_applications_view")
+		}
+	}
+
 }

@@ -1,0 +1,150 @@
+type: table
+name: elastic_amcache_driver_package
+description: Windows Amcache driver package inventory from the InventoryDriverPackage registry hive
+platforms:
+  - windows
+
+implementation_package: github.com/elastic/beats/v7/x-pack/osquerybeat/ext/osquery-extension/pkg/amcache/tables
+
+columns:
+  - name: timestamp
+    type: BIGINT
+    description: Last write time of the registry key in UNIX epoch seconds
+    go_type: time.Time
+    format: unix
+
+  - name: date_time
+    type: TEXT
+    description: Last write time of the registry key in RFC3339 format
+    go_type: time.Time
+    format: rfc3339
+    timezone: UTC
+
+  - name: class_guid
+    type: TEXT
+    description: Device class GUID
+
+  - name: class
+    type: TEXT
+    description: Device class name
+
+  - name: directory
+    type: TEXT
+    description: Driver package directory path
+
+  - name: date
+    type: TEXT
+    description: Driver package date
+
+  - name: version
+    type: TEXT
+    description: Driver package version
+
+  - name: provider
+    type: TEXT
+    description: Driver package provider/vendor
+
+  - name: submission_id
+    type: TEXT
+    description: Windows Hardware Quality Labs (WHQL) submission ID
+
+  - name: driver_in_box
+    type: TEXT
+    description: Whether the driver package is included in Windows
+
+  - name: inf
+    type: TEXT
+    description: INF file name for the driver package
+
+  - name: flight_ids
+    type: TEXT
+    description: Windows Insider flight identifiers
+
+  - name: recovery_ids
+    type: TEXT
+    description: Recovery partition identifiers
+
+  - name: is_active
+    type: TEXT
+    description: Whether the driver package is currently active
+
+  - name: hwids
+    type: TEXT
+    description: Hardware IDs supported by this driver package
+
+  - name: sysfile
+    type: TEXT
+    description: System files included in the driver package
+
+documentation:
+  description: |
+    The elastic_amcache_driver_package table provides information about driver
+    packages tracked in the Windows Amcache registry. A driver package is a
+    collection of files and metadata required to install a device driver.
+    
+    This data is valuable for:
+    - Driver package inventory and management
+    - Tracking driver updates and versions
+    - Security monitoring for malicious driver packages
+    - Compliance verification for certified drivers
+    - Troubleshooting driver installation issues
+    - Forensic analysis of driver package installations
+  
+  examples:
+    - title: List all driver packages
+      query: |
+        SELECT class, provider, version, inf, is_active
+        FROM elastic_amcache_driver_package
+        ORDER BY timestamp DESC;
+
+    - title: Find active driver packages
+      query: |
+        SELECT class, provider, version, directory
+        FROM elastic_amcache_driver_package
+        WHERE is_active = '1' OR is_active = 'True'
+        ORDER BY class, provider;
+
+    - title: Find third-party driver packages
+      query: |
+        SELECT provider, class, version, inf, submission_id
+        FROM elastic_amcache_driver_package
+        WHERE driver_in_box = '0' OR driver_in_box = 'False'
+        ORDER BY provider, class;
+
+    - title: List driver packages by class
+      query: |
+        SELECT class, COUNT(*) as package_count,
+               GROUP_CONCAT(DISTINCT provider) as providers
+        FROM elastic_amcache_driver_package
+        GROUP BY class
+        ORDER BY package_count DESC;
+
+    - title: Find recently installed driver packages
+      query: |
+        SELECT provider, class, version, date, date_time
+        FROM elastic_amcache_driver_package
+        WHERE timestamp > (strftime('%s', 'now') - 86400 * 30)
+        ORDER BY timestamp DESC;
+
+    - title: Find driver packages with WHQL certification
+      query: |
+        SELECT provider, class, version, submission_id, inf
+        FROM elastic_amcache_driver_package
+        WHERE submission_id IS NOT NULL AND submission_id != ''
+        ORDER BY provider;
+
+  notes:
+    - This table reads from the Windows Amcache.hve registry hive
+    - Driver packages contain INF files and related driver binaries
+    - submission_id indicates WHQL (Windows Hardware Quality Labs) certification
+    - driver_in_box indicates if the package ships with Windows
+    - is_active shows whether the package is currently in use
+    - hwids lists the hardware IDs that the package supports
+    - Data is cached for performance
+    - Only available on Windows platforms
+
+  related_tables:
+    - elastic_amcache_driver_binary
+    - elastic_amcache_device_pnp
+    - drivers
+    - file

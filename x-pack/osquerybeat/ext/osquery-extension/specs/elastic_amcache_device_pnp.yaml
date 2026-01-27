@@ -1,0 +1,226 @@
+type: table
+name: elastic_amcache_device_pnp
+description: Windows Amcache Plug and Play device inventory from the InventoryDevicePnp registry hive
+platforms:
+  - windows
+
+implementation_package: github.com/elastic/beats/v7/x-pack/osquerybeat/ext/osquery-extension/pkg/amcache/tables
+
+columns:
+  - name: timestamp
+    type: BIGINT
+    description: Last write time of the registry key in UNIX epoch seconds
+    go_type: time.Time
+    format: unix
+
+  - name: date_time
+    type: TEXT
+    description: Last write time of the registry key in RFC3339 format
+    go_type: time.Time
+    format: rfc3339
+    timezone: UTC
+
+  - name: model
+    type: TEXT
+    description: Device model name
+
+  - name: manufacturer
+    type: TEXT
+    description: Device manufacturer name
+
+  - name: driver_name
+    type: TEXT
+    description: Name of the installed driver
+
+  - name: parent_id
+    type: TEXT
+    description: Parent device identifier
+
+  - name: matching_id
+    type: TEXT
+    description: Hardware ID that matched during driver installation
+
+  - name: class
+    type: TEXT
+    description: Device class (e.g., Display, Net, USB)
+
+  - name: class_guid
+    type: TEXT
+    description: Device class GUID
+
+  - name: description
+    type: TEXT
+    description: Device description
+
+  - name: enumerator
+    type: TEXT
+    description: Device enumerator (e.g., PCI, USB, ROOT)
+
+  - name: service
+    type: TEXT
+    description: Service name associated with the device
+
+  - name: install_state
+    type: TEXT
+    description: Device installation state
+
+  - name: device_state
+    type: TEXT
+    description: Current device state
+
+  - name: inf
+    type: TEXT
+    description: INF file used for device installation
+
+  - name: driver_ver_date
+    type: TEXT
+    description: Driver version date
+
+  - name: install_date
+    type: TEXT
+    description: Device installation date
+
+  - name: first_install_date
+    type: TEXT
+    description: First installation date of the device
+
+  - name: driver_package_strong_name
+    type: TEXT
+    description: Strong name of the driver package
+
+  - name: driver_ver_version
+    type: TEXT
+    description: Driver version string
+
+  - name: container_id
+    type: TEXT
+    description: Container ID for the device
+
+  - name: problem_code
+    type: TEXT
+    description: Device problem code if any
+
+  - name: provider
+    type: TEXT
+    description: Driver provider
+
+  - name: driver_id
+    type: TEXT
+    description: Driver identifier
+
+  - name: bus_reported_description
+    type: TEXT
+    description: Description reported by the bus driver
+
+  - name: hw_id
+    type: TEXT
+    description: Hardware ID
+
+  - name: extended_infs
+    type: TEXT
+    description: Extended INF files
+
+  - name: compid
+    type: TEXT
+    description: Compatible ID
+
+  - name: stack_id
+    type: TEXT
+    description: Device stack identifier
+
+  - name: upper_class_filters
+    type: TEXT
+    description: Upper class filter drivers
+
+  - name: lower_class_filters
+    type: TEXT
+    description: Lower class filter drivers
+
+  - name: upper_filters
+    type: TEXT
+    description: Upper filter drivers
+
+  - name: lower_filters
+    type: TEXT
+    description: Lower filter drivers
+
+  - name: device_interface_classes
+    type: TEXT
+    description: Device interface class GUIDs
+
+  - name: location_paths
+    type: TEXT
+    description: Device location paths
+
+documentation:
+  description: |
+    The elastic_amcache_device_pnp table provides detailed information about
+    Plug and Play (PnP) devices tracked in the Windows Amcache registry. This
+    includes hardware devices, their drivers, installation details, and current state.
+    
+    This data is valuable for:
+    - Hardware inventory and asset management
+    - Driver version tracking and compliance
+    - Detecting unauthorized hardware (e.g., USB devices)
+    - Troubleshooting device and driver issues
+    - Security monitoring for malicious hardware
+    - Forensic analysis of connected devices
+  
+  examples:
+    - title: List all PnP devices
+      query: |
+        SELECT model, manufacturer, class, driver_name, device_state
+        FROM elastic_amcache_device_pnp
+        ORDER BY install_date DESC;
+
+    - title: Find USB devices
+      query: |
+        SELECT model, manufacturer, description, install_date, hw_id
+        FROM elastic_amcache_device_pnp
+        WHERE enumerator = 'USB' OR class = 'USB'
+        ORDER BY install_date DESC;
+
+    - title: Find devices with problems
+      query: |
+        SELECT model, manufacturer, description, problem_code, device_state
+        FROM elastic_amcache_device_pnp
+        WHERE problem_code IS NOT NULL AND problem_code != ''
+        ORDER BY timestamp DESC;
+
+    - title: Track network devices
+      query: |
+        SELECT model, manufacturer, description, driver_name, driver_ver_version
+        FROM elastic_amcache_device_pnp
+        WHERE class = 'Net'
+        ORDER BY model;
+
+    - title: Find recently installed devices
+      query: |
+        SELECT model, manufacturer, class, install_date, first_install_date
+        FROM elastic_amcache_device_pnp
+        WHERE timestamp > (strftime('%s', 'now') - 86400 * 7)
+        ORDER BY timestamp DESC;
+
+    - title: List devices by manufacturer
+      query: |
+        SELECT manufacturer, COUNT(*) as device_count, 
+               GROUP_CONCAT(DISTINCT class) as classes
+        FROM elastic_amcache_device_pnp
+        GROUP BY manufacturer
+        ORDER BY device_count DESC;
+
+  notes:
+    - This table reads from the Windows Amcache.hve registry hive
+    - Tracks all PnP devices that have been connected to the system
+    - Useful for detecting rogue hardware and unauthorized USB devices
+    - Problem codes indicate device errors or issues
+    - Filter drivers can indicate security software or potentially malicious drivers
+    - Data is cached for performance
+    - Only available on Windows platforms
+
+  related_tables:
+    - elastic_amcache_driver_binary
+    - elastic_amcache_driver_package
+    - drivers
+    - device_file
+    - usb_devices
