@@ -91,9 +91,7 @@ func TestPublisherMetadataStore(t *testing.T) {
 		// from formatting the event handle with the template inserts. The
 		// latter (EvtFormatMessageEvent) only substitutes the inserts for
 		// string parameters and bakes zero values for all other types into
-		// the cached template (e.g. "(PID: 0)"). Both representations must
-		// be replaced together so a stale event-handle MsgStatic cannot win
-		// over the publisher MsgTemplate in formatMessage.
+		// the cached template (e.g. "(PID: 0)").
 		assert.Same(t, defaultEM.MsgTemplate, em.MsgTemplate, "expected the message template from the publisher metadata to be used")
 		assert.Equal(t, defaultEM.MsgStatic, em.MsgStatic, "expected the static message from the publisher metadata to be used")
 		assert.Empty(t, em.MsgStatic, "publisher MsgTemplate must clear any event-handle MsgStatic")
